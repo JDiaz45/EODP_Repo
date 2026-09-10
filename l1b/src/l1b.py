@@ -39,7 +39,7 @@ class l1b(initL1b):
                 toa = self.equalization(toa, eq_add, eq_mult)
                 writeToa(self.outdir, self.globalConfig.l1b_toa_eq + band, toa)
 
-            # Restitution (absolute radiometric gain)
+            # Restitution (absolute radiometric gain) toa = Top Of Atmosphere
             # -------------------------------------------------------------------------------
             self.logger.info("EODP-ALG-L1B-1020: Absolute radiometric gain application (restoration)")
             toa = self.restoration(toa, self.l1bConfig.gain[getIndexBand(band)])
@@ -63,6 +63,7 @@ class l1b(initL1b):
         :return: TOA in DN, equalized
         """
         #TODO
+        toa = (toa - eq_add) / eq_mult
         return toa
 
     def restoration(self,toa,gain):
@@ -73,6 +74,7 @@ class l1b(initL1b):
         :return: TOA in radiances [mW/sr/m2]
         """
         #TODO
+        toa = toa * gain
         self.logger.debug('Sanity check. TOA in radiances after gain application ' + str(toa[1,-1]) + ' [mW/m2/sr]')
 
         return toa
