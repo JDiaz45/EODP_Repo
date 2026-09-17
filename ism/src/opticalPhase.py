@@ -93,6 +93,7 @@ class opticalPhase(initIsm):
         :return: TOA image in irradiances [mW/m2]
         """
         # TODO
+        toa = Tr * toa * (pi / 4.0) * (D / f) ** 2
         return toa
 
 
@@ -104,6 +105,19 @@ class opticalPhase(initIsm):
         :return: TOA image in irradiances [mW/m2]
         """
         # TODO
+
+        # Fourier transform of the input TOA
+        toa_ft = fft2(toa)
+
+        # Shift the system MTF and apply it in the frequency domain
+        toa_ft = toa_ft * fftshift(Hsys)
+
+        # Back to the spatial domain
+        toa_ft = ifft2(toa_ft)
+
+        # Imaginary part should be negligible
+        toa_ft = np.real(toa_ft)
+
         return toa_ft
 
     def spectralIntegration(self, sgm_toa, sgm_wv, band):
@@ -115,6 +129,41 @@ class opticalPhase(initIsm):
         :return: TOA image 2D in radiances [mW/m2]
         """
         # TODO
+
+        isrf, wv_isrf = readIsrf(
+            self.auxdir + '/' + self.ismConfig.isrffile,
+            band
+        )
+
+        # Convert ISRF wavelengths from um to nm
+        wv_isrf = wv_isrf * 1000.0
+
+        # Normalize ISRF by its integral
+        isrf_n = isrf / np.trapz(isrf, wv_isrf)
+
+        # Output image
+        toa = np.zeros(
+            (sgm_toa.shape[0], sgm_toa.shape[1])
+        )
+
+        for ialt in range(sgm_toa.shape[0]):
+            for iact in range(sgm_toa.shape[1]):
+                # Interpolate the SGM spectrum onto the ISRF wavelengths
+                cs = interp1d(
+                    sgm_wv,
+                    sgm_toa[ialt, iact, :],
+                    fill_value=(0, 0),
+                    bounds_error=False
+                )
+
+                toa_interp = cs(wv_isrf)
+
+                # Spectral integration
+                toa[ialt, iact] = np.trapz(
+                    toa_interp * isrf_n,
+                    wv_isrf
+                )
+
         return toa
 
 
