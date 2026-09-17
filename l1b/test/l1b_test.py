@@ -188,7 +188,7 @@ def cross_validation():
         # Absolute difference
         diff = np.abs(my_toa - ref_toa)
 
-        max_abs = np.max(diff)
+        max_abs = float(np.max(diff))
 
         # Relative difference only where
         # the reference value is not zero
@@ -202,7 +202,7 @@ def cross_validation():
                 * 100.0
             )
 
-            max_rel = np.max(relative_difference)
+            max_rel = float(np.max(relative_difference))
 
         else:
             max_rel = 0.0
