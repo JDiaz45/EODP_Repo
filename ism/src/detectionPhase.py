@@ -105,6 +105,23 @@ class detectionPhase(initIsm):
         :return: Toa in photons
         """
         #TODO
+
+        # Physical constants
+        h =  self.constants.h_planck #6.62606896e-34  Planck constant [J s]
+        c = self.constants.speed_light #2.99792458e8  Speed of light [m/s]
+
+        # Convert irradiance from mW/m2 to W/m2
+        toa_w = toa * 1e-3
+
+        # Energy received by each detector pixel [J]
+        Ein = toa_w * area_pix * tint
+
+        # Energy of one photon [J]
+        Ephoton = h * c / wv
+
+        # Number of incident photons
+        toa_ph = Ein / Ephoton
+
         return toa_ph
 
     def phot2Electr(self, toa, QE):
@@ -115,6 +132,13 @@ class detectionPhase(initIsm):
         :return: toa in electrons
         """
         #TODO
+
+        # Photon to electron conversion
+        toae = toa * QE
+
+        # Saturation at Full Well Capacity
+        toae = np.minimum(toae, self.ismConfig.FWC)
+
         return toae
 
     def badDeadPixels(self, toa,bad_pix,dead_pix,bad_pix_red,dead_pix_red):
@@ -128,6 +152,30 @@ class detectionPhase(initIsm):
         :return: toa in e- including bad & dead pixels
         """
         #TODO
+
+        # Number of detector elements in ACT direction
+        toa_act = toa.shape[1]
+
+        # Number of affected pixels
+        n_bad = int(toa_act * bad_pix / 100.0)
+        n_dead = int(toa_act * dead_pix / 100.0)
+
+        # Bad pixels
+        if n_bad > 0:
+            step_bad = int(toa_act / n_bad)
+            idx_bad = range(5, toa_act, step_bad)
+
+            for idx in idx_bad:
+                toa[:, idx] = toa[:, idx] * (1.0 - bad_pix_red)
+
+        # Dead pixels
+        if n_dead > 0:
+            step_dead = int(toa_act / n_dead)
+            idx_dead = range(0, toa_act, step_dead)
+
+            for idx in idx_dead:
+                toa[:, idx] = toa[:, idx] * (1.0 - dead_pix_red)
+
         return toa
 
     def prnu(self, toa, kprnu):
@@ -138,6 +186,17 @@ class detectionPhase(initIsm):
         :return: TOA after adding PRNU [e-]
         """
         #TODO
+
+        # PRNU for each detector element in ACT
+        prnu = np.random.normal(
+            loc=0.0,
+            scale=1.0,
+            size=toa.shape[1]
+        ) * kprnu
+
+        # Same detector response for every ALT acquisition
+        toa = toa * (1.0 + prnu)
+
         return toa
 
 
@@ -153,4 +212,29 @@ class detectionPhase(initIsm):
         :return: TOA in [e-] with dark signal
         """
         #TODO
+
+        # DSNU for each detector element in ACT
+        dsnu = np.abs(
+            np.random.normal(
+                loc=0.0,
+                scale=1.0,
+                size=toa.shape[1]
+            )
+        ) * kdsnu
+
+        # Constant dark signal component
+        Sd = (
+                ds_A_coeff
+                * (T / Tref) ** 3
+                * np.exp(
+            -ds_B_coeff * (1.0 / T - 1.0 / Tref)
+        )
+        )
+
+        # Total dark signal per ACT detector element
+        DS = Sd * (1.0 + dsnu)
+
+        # Add dark signal to all ALT acquisitions
+        toa = toa + DS
+
         return toa

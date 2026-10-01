@@ -135,20 +135,20 @@ class opticalPhase(initIsm):
             band
         )
 
-        # Convert ISRF wavelengths from um to nm
-        wv_isrf = wv_isrf * 1000.0
-
-        # Normalize ISRF by its integral
-        isrf_n = isrf / np.trapz(isrf, wv_isrf)
-
         # Output image
         toa = np.zeros(
             (sgm_toa.shape[0], sgm_toa.shape[1])
         )
 
+        # Normalise ISRF
+        isrf = isrf / np.sum(isrf)
+
+        # Convert ISRF wavelengths from um to nm
+        wv_isrf = wv_isrf * 1000.0
+
         for ialt in range(sgm_toa.shape[0]):
             for iact in range(sgm_toa.shape[1]):
-                # Interpolate the SGM spectrum onto the ISRF wavelengths
+                # Interpolate SGM spectrum onto ISRF wavelengths
                 cs = interp1d(
                     sgm_wv,
                     sgm_toa[ialt, iact, :],
@@ -156,12 +156,11 @@ class opticalPhase(initIsm):
                     bounds_error=False
                 )
 
-                toa_interp = cs(wv_isrf)
+                sgm_inter = cs(wv_isrf)
 
                 # Spectral integration
-                toa[ialt, iact] = np.trapz(
-                    toa_interp * isrf_n,
-                    wv_isrf
+                toa[ialt, iact] = np.sum(
+                    sgm_inter * isrf
                 )
 
         return toa
