@@ -197,7 +197,7 @@ plt.close()
 
 
 # ==================================================================
-# PLOT 3: Spatial Sampling Distance versus latitude
+# PLOT 3: Spatial Sampling Distance variation versus latitude
 # ==================================================================
 
 # Central ACT column
@@ -220,25 +220,31 @@ latitude_mid = (
     lat_column[:-1] + lat_column[1:]
 ) / 2.0
 
+# Difference relative to mean SSD, expressed in millimetres
+ssd_delta_mm = (
+    ssd_alt - np.mean(ssd_alt)
+) * 1000.0
+
 
 plt.figure(figsize=(10, 6))
 
 plt.plot(
     latitude_mid,
-    ssd_alt,
+    ssd_delta_mm,
     marker="."
 )
 
+# Zero represents the mean SSD
 plt.axhline(
-    np.mean(ssd_alt),
+    0.0,
     linestyle="--",
-    label=f"Mean SSD = {np.mean(ssd_alt):.2f} m"
+    label=f"Mean SSD = {np.mean(ssd_alt):.3f} m"
 )
 
 plt.xlabel("Latitude [deg]")
-plt.ylabel("Spatial Sampling Distance [m]")
+plt.ylabel("SSD deviation from mean [mm]")
 plt.title(
-    "L1B Spatial Sampling Distance versus Latitude"
+    "L1B Spatial Sampling Distance variation versus Latitude"
 )
 
 plt.grid(True)
@@ -271,6 +277,12 @@ print("Central ACT column:", central_col)
 print("ALT SSD minimum [m]:", np.min(ssd_alt))
 print("ALT SSD maximum [m]:", np.max(ssd_alt))
 print("ALT SSD mean    [m]:", np.mean(ssd_alt))
+
+print()
+print(
+    "Maximum SSD deviation from mean [mm]:",
+    np.max(np.abs(ssd_delta_mm))
+)
 
 print()
 print("Saved figures:")
