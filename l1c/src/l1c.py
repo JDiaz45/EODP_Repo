@@ -63,6 +63,64 @@ class l1c(initL1c):
         :return: L1C radiances, L1C latitude and longitude in degrees
         '''
         #TODO
+
+        # Create interpolant relating geodetic coordinates
+        # to the L1B radiances
+        tck = bisplrep(
+            lat.ravel(),
+            lon.ravel(),
+            toa.ravel()
+        )
+
+        # MGRS converter
+        m = mgrs.MGRS()
+
+        # Unique MGRS tiles
+        mgrs_tiles = set()
+
+        # MGRS precision 3 = 100 m
+        mgrs_precision = 3
+
+        # Convert all L1B coordinates to MGRS
+        for ialt in range(lat.shape[0]):
+            for iact in range(lat.shape[1]):
+
+                tile = m.toMGRS(
+                    float(lat[ialt, iact]),
+                    float(lon[ialt, iact]),
+                    MGRSPrecision=mgrs_precision
+                )
+
+                # Compatibility with versions of mgrs returning bytes
+                if isinstance(tile, bytes):
+                    tile = tile.decode('ascii')
+
+                mgrs_tiles.add(str(tile))
+
+        # Convert set to list
+        mgrs_tiles = list(mgrs_tiles)
+
+        # Initialise L1C outputs
+        n_tiles = len(mgrs_tiles)
+
+        lat_l1c = np.zeros(n_tiles)
+        lon_l1c = np.zeros(n_tiles)
+        toa_l1c = np.zeros(n_tiles)
+
+        # Convert each MGRS tile back to lat/lon and
+        # interpolate its radiance
+        for i, tile in enumerate(mgrs_tiles):
+            lat_l1c[i], lon_l1c[i] = m.toLatLon(
+                tile,
+                inDegrees=True
+            )
+
+            toa_l1c[i] = bisplev(
+                lat_l1c[i],
+                lon_l1c[i],
+                tck
+            )
+
         return lat_l1c, lon_l1c, toa_l1c
 
     def checkSize(self, lat,toa):
@@ -74,3 +132,12 @@ class l1c(initL1c):
         :return: NA
         '''
         #TODO
+
+        if lat.shape != toa.shape:
+            raise Exception(
+                "L1C input size mismatch: "
+                + "latitude shape "
+                + str(lat.shape)
+                + " != TOA shape "
+                + str(toa.shape)
+            )
